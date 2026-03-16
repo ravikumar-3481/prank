@@ -1,83 +1,66 @@
 import streamlit as st
+import pyshorteners
 import time
 
-# Set page configuration
-st.set_page_config(page_title="Prank Simulator", page_icon="📱")
+# Page ki setting aur title
+st.set_page_config(page_title="Fake URL Prank", page_icon="🎣")
 
-st.title("📱 WhatsApp Prank UI Simulator")
-st.markdown("""
-**Disclaimer:** This is a safe UI simulator built for educational purposes to learn Streamlit. 
-Actual message bombing violates WhatsApp policies and will get your account permanently banned.
-""")
-
-# --- STATE MANAGEMENT ---
-# Streamlit re-runs from top to bottom. We use session_state to remember if the tool is running.
-if 'is_running' not in st.session_state:
-    st.session_state.is_running = False
-
-# --- UI ELEMENTS ---
-st.subheader("⚙️ Target Settings")
-phone_number = st.text_input("Enter Target Mobile Number (with country code):", "+91")
-message = st.text_area("Message to send:", "Bhai phone utha! 🚨")
-
-col_a, col_b = st.columns(2)
-with col_a:
-    count = st.number_input("Number of Messages (Loop limit):", min_value=1, max_value=500, value=10)
-with col_b:
-    delay = st.slider("Delay between messages (seconds):", 0.5, 5.0, 1.0)
-
-# --- BUTTONS ---
+# Main Header
+st.title("🎣 Fake URL Prank Generator")
+st.markdown("Apne doston ko bewakoof banane ke liye ek 'Short Link' generate karein. **(100% Harmless)**")
 st.markdown("---")
-col1, col2 = st.columns(2)
 
-with col1:
-    # Start Button
-    if st.button("🚀 Start Prank", use_container_width=True, type="primary"):
-        st.session_state.is_running = True
+# Prank URLs ka dictionary (Yahan hum ready-made prank websites use kar rahe hain)
+PRANK_URLS = {
+    "🎵 Classic Rickroll (YouTube)": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "💻 Fake Windows Update (Full Screen)": "https://fakeupdate.net/win10ue/",
+    "💀 Hacker Terminal (Typing Prank)": "https://hackertyper.net/",
+    "🚨 Fake Virus Scan": "https://prankked.com/fake-virus-alert.html",
+    "📱 You Are An Idiot (Classic)": "https://youareanidiot.cc/"
+}
 
-with col2:
-    # Stop Button
-    if st.button("🛑 Stop Prank", use_container_width=True):
-        st.session_state.is_running = False
+# Input Section
+st.subheader("1. Prank Type Select Karein")
+selected_prank = st.selectbox(
+    "Kaunsa prank karna hai dost ke sath?",
+    list(PRANK_URLS.keys())
+)
 
-# --- LOGIC & EXECUTION ---
-if st.session_state.is_running:
-    if not phone_number or not message:
-        st.error("Please enter both a phone number and a message!")
-        st.session_state.is_running = False
+# Custom URL option (Agar user apna koi link dalna chahe)
+st.subheader("2. (Optional) Custom Prank Link")
+custom_url = st.text_input("Agar apna koi link hai toh yahan dalein (http/https zaroor lagayein):", "")
+
+# Button Section
+st.markdown("<br>", unsafe_allow_html=True)
+generate_btn = st.button("🚀 Generate Prank Link", type="primary", use_container_width=True)
+
+# URL Shortener Logic
+if generate_btn:
+    # Check karein ki user ne custom URL diya hai ya list me se select kiya hai
+    target_url = custom_url if custom_url.strip() != "" else PRANK_URLS[selected_prank]
+    
+    # URL validation (Basic)
+    if not target_url.startswith("http"):
+        st.error("⚠️ Link hamesha 'http://' ya 'https://' se start hona chahiye!")
     else:
-        st.info("Initiating Prank Sequence...")
-        
-        # UI Elements for tracking progress
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        log_box = st.empty()
-        
-        logs = ""
+        with st.spinner("Link generate ho raha hai... Ruko zara, sabar karo! ⏳"):
+            time.sleep(1.5) # Thoda suspense build karne ke liye delay
+            try:
+                # Pyshorteners ka use karke TinyURL banana
+                s = pyshorteners.Shortener()
+                short_link = s.tinyurl.short(target_url)
+                
+                # Success Message aur Link Display
+                st.success("🎉 Prank Link Ready Hai!")
+                st.info(f"**Tumhara Link:** {short_link}")
+                
+                st.markdown("### Ab kya karein?")
+                st.write("Upar wale link ko copy karo aur apne dost ko WhatsApp ya Insta par bhejo aur kaho:")
+                st.code(f"Bhai ye link dekh, free Netflix mil raha hai! 👇\n{short_link}", language="text")
+                
+            except Exception as e:
+                st.error("❌ Link generate karne me error aa gaya. Internet connection check karein.")
+                st.write(f"Technical Error: {e}")
 
-        # The Loop
-        for i in range(count):
-            # Check if user clicked STOP during the loop
-            if not st.session_state.is_running:
-                status_text.warning("⚠️ Prank Aborted by User!")
-                break
-            
-            # Update Progress UI
-            current_msg_num = i + 1
-            status_text.text(f"Sending message {current_msg_num} of {count} to {phone_number}...")
-            progress_bar.progress(current_msg_num / count)
-            
-            # Add to logs
-            logs += f"✅ [Sent] Message {current_msg_num}: '{message}' to {phone_number}\n"
-            log_box.text_area("Live Terminal Logs:", logs, height=150)
-            
-            # Simulate the delay
-            time.sleep(delay)
-            
-        # Completion check
-        if st.session_state.is_running:
-            status_text.success("🎉 Prank Loop Completed Successfully! (Simulation Finished)")
-            st.session_state.is_running = False
-            
-elif not st.session_state.is_running and count > 0:
-    st.write("System Ready. Waiting for command.")
+st.markdown("---")
+st.caption("Note: Ye app sirf doston ke sath mazak karne ke liye hai. Koi actual virus ya harm nahi hoga.")
